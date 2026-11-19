@@ -20,6 +20,6 @@ def predict(cows: list[CowData]) -> list[Prediction]:
             p += 0.3
         if c.activity < 50:
             p += 0.1
-        p = min(p, 1.0)
+        p = round(min(p, 1.0), 3)
         results.append(Prediction(cow_id=c.cow_id, probability=p, risk_level=risk_level(p)))
     return results
