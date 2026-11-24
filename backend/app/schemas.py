@@ -13,3 +13,9 @@ class Prediction(BaseModel):
     cow_id: str
     probability: float = Field(..., ge=0, le=1)
     risk_level: str = Field(..., description="low, medium or high")
+
+class Measurement(BaseModel):
+    date: str = Field(..., description="Date, ISO format YYYY-MM-DD")
+    activity: float
+    rumination: float
+    temperature: float

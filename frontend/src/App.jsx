@@ -1,7 +1,8 @@
 ﻿import { useState } from "react";
 import "./App.css";
-
-const API_URL = "http://localhost:8000";
+import { predictCsv, API_URL } from "./api";
+import CowDetails from "./CowDetails";
+import HerdSummary from "./HerdSummary";
 
 const RISK_LABELS = { high: "Высокий", medium: "Средний", low: "Низкий" };
 
@@ -10,29 +11,16 @@ export default function App() {
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [selectedCow, setSelectedCow] = useState(null);
+    const [showSummary, setShowSummary] = useState(false);
 
     async function handleSubmit() {
         if (!file) return;
         setLoading(true);
         setError("");
-
-        const formData = new FormData();
-        formData.append("file", file);
-
         try {
-            const res = await fetch(`${API_URL}/predict/csv`, {
-                method: "POST",
-                body: formData,
-            });
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                throw new Error(
-                    typeof err.detail === "string"
-                        ? err.detail
-                        : `Ошибка сервера (${res.status})`
-                );
-            }
-            setResults(await res.json());
+            setResults(await predictCsv(file));
+            setShowSummary(false);
         } catch (e) {
             setResults([]);
             setError(
@@ -52,7 +40,8 @@ export default function App() {
             <h1>Раннее выявление мастита</h1>
             <p className="subtitle">
                 Загрузите CSV с данными датчиков по стаду (колонки: cow_id, activity,
-                rumination, temperature).
+                rumination, temperature). Система подсказывает, каких коров осмотреть
+                в первую очередь, диагноз ставит ветеринар.
             </p>
 
             <div className="upload">
@@ -76,12 +65,22 @@ export default function App() {
                         <div className="card low">Низкий риск: {count("low")}</div>
                     </div>
 
+                    <button
+                        className="secondary"
+                        onClick={() => setShowSummary((v) => !v)}
+                    >
+                        {showSummary ? "Скрыть сводку" : "Сводка по стаду"}
+                    </button>
+
+                    {showSummary && <HerdSummary results={results} />}
+
                     <table>
                         <thead>
                             <tr>
                                 <th>Корова</th>
-                                <th>Вероятность мастита</th>
+                                <th>Вероятность</th>
                                 <th>Уровень риска</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -94,11 +93,23 @@ export default function App() {
                                             {RISK_LABELS[r.risk_level] ?? r.risk_level}
                                         </span>
                                     </td>
+                                    <td>
+                                        <button
+                                            className="secondary"
+                                            onClick={() => setSelectedCow(r)}
+                                        >
+                                            Динамика
+                                        </button>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </>
+            )}
+
+            {selectedCow && (
+                <CowDetails cow={selectedCow} onClose={() => setSelectedCow(null)} />
             )}
         </div>
     );
